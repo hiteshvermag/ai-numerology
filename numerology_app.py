@@ -602,4 +602,4 @@ with gr.Blocks(title="AI Numerology") as demo:
     gr.Markdown("*For entertainment and self-reflection only, not professional advice.*")
 
 if __name__ == "__main__":
-    demo.launch()
+    demo.launch(server_name="0.0.0.0", server_port=int(os.getenv("PORT", "7860")) , share=False)
