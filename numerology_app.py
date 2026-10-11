@@ -14,7 +14,7 @@ CrewAI agents only INTERPRET those numbers.
 Run:
     pip install -r requirements.txt
     export OPENAI_API_KEY=...              # or ANTHROPIC_API_KEY=...
-    export CREWAI_MODEL=gpt-4o-mini        # or anthropic/claude-sonnet-4-5
+    export CREWAI_MODEL=gemini/gemini-2.5-flash   # or gpt-4o-mini / anthropic/claude-sonnet-4-5
     python numerology_app.py
 
 Hindi PDF needs a Devanagari font (see find_devanagari_font()).
@@ -30,6 +30,12 @@ import tempfile
 import datetime as dt
 
 import gradio as gr
+
+try:                                   # reads GEMINI_API_KEY etc. from a .env file
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass
 
 # ======================================================================
 # 1. NUMEROLOGY ENGINE (Pythagorean system)
@@ -216,7 +222,21 @@ LABELS = {
 # ======================================================================
 def _llm():
     from crewai import LLM  # lazy import
-    return LLM(model=os.getenv("CREWAI_MODEL", "gpt-4o-mini"), temperature=0.7)
+    model = os.getenv("CREWAI_MODEL", "groq/openai/gpt-oss-120b")
+    kwargs = {"model": model, "temperature": 0.7}
+    if model.startswith("groq/"):
+        key = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
+        if not key:
+            raise RuntimeError("GEMINI_API_KEY is not set. Put it in a .env file next to "
+                               "this script or set it in the same terminal.")
+        kwargs["api_key"] = key
+        if model == "groq/openai/gpt-oss-120b":
+                # Use Groq's OpenAI-compatible endpoint through CrewAI's native client.
+                # (The LiteLLM "groq/" route sends a 'cache_breakpoint' field that Groq rejects.)
+                kwargs["model"] = "openai/" + model[len("groq/"):]
+                kwargs["base_url"] = os.getenv("GROQ_BASE_URL", "https://api.groq.com/openai/v1")
+    print(f"[numerology] using model: {model}")   # shows in your terminal
+    return LLM(**kwargs)
 
 
 def _agent(**kw):
@@ -600,6 +620,9 @@ with gr.Blocks(title="AI Numerology") as demo:
                [c_head, c_table, c_md, c_pdf])
 
     gr.Markdown("*For entertainment and self-reflection only, not professional advice.*")
+
+#if __name__ == "__main__":
+ #   demo.launch( share=True)
 
 if __name__ == "__main__":
     demo.launch(server_name="0.0.0.0", server_port=int(os.getenv("PORT", "7860")) , share=False)
