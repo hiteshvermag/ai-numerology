@@ -1,0 +1,4 @@
+gradio>=4.0
+crewai>=0.80
+fpdf2>=2.7.9
+uharfbuzz>=0.39      # needed for correct Hindi (Devanagari) text shaping in PDF
